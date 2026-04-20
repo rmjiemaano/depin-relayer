@@ -4,18 +4,20 @@ export default async function handler(req, res) {
   try {
     const sensorData = req.body;
     
-    // 1. Get your Private Key from Vercel (Ensure it has the 0x prefix)
+    // 1. Get the key and ensure it has the 0x prefix
     let rawKey = process.env.PRIVATE_KEY;
+    if (!rawKey) throw new Error("Private Key missing in Vercel settings.");
     const formattedKey = rawKey.startsWith('0x') ? rawKey : '0x' + rawKey;
 
-    // 2. Your Exact Stream ID
+    // 2. The EXACT Stream ID
     const streamId = "0x743b921B4a8553682399fa3C5C3f11b9aFb68938/dumaguete/climate-telemetry";
 
-    // 3. The "Legacy" Gateway - This is often more stable for 502/504 errors
-    // We manually encode the slash to %2F to ensure the URL is perfect
-    const url = `https://streamr.network/api/v1/streams/${streamId.replace("/", "%2F")}/data`;
+    // 3. The Professional Encoding Fix
+    // This converts ALL slashes correctly so Streamr won't throw a 502
+    const encodedId = encodeURIComponent(streamId);
+    const url = `https://streamr.network/api/v1/streams/${encodedId}/data`;
 
-    // 4. Send the data to the Marketplace
+    // 4. Send the data
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -27,16 +29,16 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Streamr Error: ${errorText}`);
+      throw new Error(`Streamr Rejected Request: ${errorText}`);
     }
 
     return res.status(200).json({ 
       success: true, 
-      message: "Success! Data is now live and monetized." 
+      message: "Data is now live on the marketplace!" 
     });
 
   } catch (error) {
-    console.error("Relayer Crash:", error.message);
+    console.error("Relayer Error:", error.message);
     return res.status(500).json({ error: error.message });
   }
 }
